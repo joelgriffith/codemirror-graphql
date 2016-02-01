@@ -121,7 +121,9 @@ function getToken(stream, state) {
       }
 
       // Otherwise, match a Terminal.
-      if (expected.match && expected.match(token)) {
+      const areConstraintsMet =
+        !(expected.constraints && expected.constraints(token));
+      if (areConstraintsMet && expected.match && expected.match(token)) {
         if (expected.update) {
           expected.update(state, token);
         }
@@ -241,6 +243,13 @@ function lex(stream) {
       return { kind: kinds[i], value: match[0] };
     }
   }
+}
+
+// An exclusion/constraint described as `but not` from the spec
+function butNot(rule, exclusions) {
+  rule.constraints = token =>
+    exclusions.some(exclusion => token.value.match(exclusion));
+  return rule;
 }
 
 // An optional rule.
@@ -379,7 +388,7 @@ var ParseRules = {
   ],
   FragmentDefinition: [
     word('fragment'),
-    name('def'),
+    opt(butNot(name('def'), ['on'])),
     'TypeCondition',
     list('Directive'),
     'SelectionSet'
